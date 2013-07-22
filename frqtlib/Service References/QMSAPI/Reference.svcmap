@@ -20,7 +20,7 @@
     <ServiceContractMappings />
   </ClientOptions>
   <MetadataSources>
-    <MetadataSource Address="http://frpar-lft2:4799/QMS/Service" Protocol="http" SourceId="1" />
+    <MetadataSource Address="http://localhost:4799/QMS/Service" Protocol="http" SourceId="1" />
   </MetadataSources>
   <Metadata>
     <MetadataFile FileName="QMSBackendService.wsdl" MetadataType="Wsdl" ID="3994963f-65c8-40ad-90c6-569fcbdee942" SourceId="1" SourceUrl="http://frpar-lft2:4799/QMS/Service" />
