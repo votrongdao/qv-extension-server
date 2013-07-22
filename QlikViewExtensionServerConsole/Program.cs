@@ -13,7 +13,7 @@ using myCore = frqtlib.Core;
 
 namespace QlikViewExtensionServerConsole
 {
-    class Program
+    class Program 
     {
         static void Main(string[] args)
         {
