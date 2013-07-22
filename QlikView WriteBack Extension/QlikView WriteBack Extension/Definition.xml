@@ -1,0 +1,10 @@
+﻿<?xml version="1.0" encoding="utf-8"?> 
+<ExtensionObject xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="Definition.xsd" Label="QlikViewWriteBackExtension" Description="Extension that performs writeback to a SOAP webservice" >
+    <Dimension Initial="" DropTarget="First Row"  />
+    <Dimension Initial="" DropTarget="Second Row"  />
+    <Measurement Initial="" DropTarget="Expression"  />
+    <Initiate Name="Caption.Text" Value="QlikViewWriteBackExtension" /> 
+    <Initiate Name="Caption.Font.Italic" Value="1" /> 
+    <Initiate Name="Chart.BgColor.ColorHex" Value="#FFFFE0" /> 
+
+</ExtensionObject>

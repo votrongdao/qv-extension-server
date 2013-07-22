@@ -1,0 +1,95 @@
+K 25
+svn:wc:ra_dav:version-url
+V 47
+/svn/GBI/!svn/ver/128/QvCap/myQV10Cap/Threading
+END
+ChangedWorkItemStateEvent.cs
+K 25
+svn:wc:ra_dav:version-url
+V 76
+/svn/GBI/!svn/ver/128/QvCap/myQV10Cap/Threading/ChangedWorkItemStateEvent.cs
+END
+PriorityQueue.cs
+K 25
+svn:wc:ra_dav:version-url
+V 64
+/svn/GBI/!svn/ver/128/QvCap/myQV10Cap/Threading/PriorityQueue.cs
+END
+WorkQueue.cs
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/svn/GBI/!svn/ver/128/QvCap/myQV10Cap/Threading/WorkQueue.cs
+END
+IResourcePool.cs
+K 25
+svn:wc:ra_dav:version-url
+V 64
+/svn/GBI/!svn/ver/128/QvCap/myQV10Cap/Threading/IResourcePool.cs
+END
+IWork.cs
+K 25
+svn:wc:ra_dav:version-url
+V 56
+/svn/GBI/!svn/ver/128/QvCap/myQV10Cap/Threading/IWork.cs
+END
+Pipe.cs
+K 25
+svn:wc:ra_dav:version-url
+V 55
+/svn/GBI/!svn/ver/139/QvCap/myQV10Cap/Threading/Pipe.cs
+END
+IWorkQueue.cs
+K 25
+svn:wc:ra_dav:version-url
+V 61
+/svn/GBI/!svn/ver/128/QvCap/myQV10Cap/Threading/IWorkQueue.cs
+END
+WorkItem.cs
+K 25
+svn:wc:ra_dav:version-url
+V 59
+/svn/GBI/!svn/ver/128/QvCap/myQV10Cap/Threading/WorkItem.cs
+END
+InvalidTransition.cs
+K 25
+svn:wc:ra_dav:version-url
+V 68
+/svn/GBI/!svn/ver/128/QvCap/myQV10Cap/Threading/InvalidTransition.cs
+END
+WorkItemState.cs
+K 25
+svn:wc:ra_dav:version-url
+V 64
+/svn/GBI/!svn/ver/128/QvCap/myQV10Cap/Threading/WorkItemState.cs
+END
+WorkItemEvent.cs
+K 25
+svn:wc:ra_dav:version-url
+V 64
+/svn/GBI/!svn/ver/128/QvCap/myQV10Cap/Threading/WorkItemEvent.cs
+END
+WorkThreadPool.cs
+K 25
+svn:wc:ra_dav:version-url
+V 65
+/svn/GBI/!svn/ver/128/QvCap/myQV10Cap/Threading/WorkThreadPool.cs
+END
+WorkParameters.cs
+K 25
+svn:wc:ra_dav:version-url
+V 65
+/svn/GBI/!svn/ver/128/QvCap/myQV10Cap/Threading/WorkParameters.cs
+END
+ResourceExceptionEvent.cs
+K 25
+svn:wc:ra_dav:version-url
+V 73
+/svn/GBI/!svn/ver/128/QvCap/myQV10Cap/Threading/ResourceExceptionEvent.cs
+END
+IWorkItem.cs
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/svn/GBI/!svn/ver/128/QvCap/myQV10Cap/Threading/IWorkItem.cs
+END

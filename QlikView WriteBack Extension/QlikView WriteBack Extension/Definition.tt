@@ -1,0 +1,27 @@
+﻿<?xml version="1.0" encoding="utf-8"?><#@include file="SharedTemplateCode.txt"#><#@ output extension=".xml" #>
+<# ShowMessage = true; XmlDocument xmlDoc = GetXMLDocumentModel();
+XmlNodeList properties = xmlDoc.GetElementsByTagName( "Property" );
+string name = xmlDoc.DocumentElement.Attributes["Name"].Value;
+int expressionCount = 0;
+int dimensionCount = 0;
+#><ExtensionObject xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="Definition.xsd" Label="<#=name#>"<#=xmlDoc.DocumentElement.Attributes["Description"] != null ? " Description=\"" + xmlDoc.DocumentElement.Attributes["Description"].Value + "\"": ""#> >
+    <# string[] types = new string[] {"Dimension", "Expression", "Check", "Text"}; 
+    for (int t = 0; t<types.Length; t++) { 
+        if (types[t] == "Check") {
+            if (expressionCount == 0 && dimensionCount > 0) { #>
+<<#=GetTypeForDefinition("Expression") + " Initial=\"\"/>"  #>
+    <#  }
+            continue;
+        }
+        for (int i = 0; i<properties.Count; i++) { 
+            string type = properties[i].Attributes["Type"].Value; 
+            if (type != types[t]) continue;
+            if (type == "Dimension") dimensionCount++;
+            if (type == "Expression") expressionCount++;
+            string label = properties[i].Attributes["Label"].Value; #>
+<<#=GetTypeForDefinition(type) #> <#=type == "Dimension" || type == "Expression" ? "Initial=\"\" DropTarget=\"" + label + "\"" : "" #> <#=properties[i].Attributes["Expression"] != null ? "Expression=\"" + properties[i].Attributes["Expression"].Value + "\"": ""#> />
+    <# } }#><Initiate Name="Caption.Text" Value="<#=name#>" /> 
+    <Initiate Name="Caption.Font.Italic" Value="1" /> 
+    <Initiate Name="Chart.BgColor.ColorHex" Value="#FFFFE0" /> 
+
+</ExtensionObject>

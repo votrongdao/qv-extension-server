@@ -1,0 +1,70 @@
+﻿<#@template hostspecific="true" debug="true" #> 
+<#@ assembly name="System.xml.dll" #>
+<#@ assembly name="EnvDTE" #>
+<#@ assembly name="System.Windows.Forms.dll" #>
+<#@ import namespace="System" #>
+<#@ import namespace="System.IO" #>
+<#@ import namespace="System.Xml" #>
+<#@ import namespace="System.Windows.Forms" #>
+<#+
+private bool ShowMessage = false;
+private const string NONAME = "You must enter a name for the extension!";
+private const string NOCONTROL = "There is no QvExtension object!";
+
+private string ProjectPath()
+{
+    try {	
+    EnvDTE.DTE dte = (EnvDTE.DTE) ((IServiceProvider) this.Host).GetService(typeof(EnvDTE.DTE));
+    foreach (EnvDTE.Project project in dte.Solution.Projects)
+    {
+        string path = Path.GetDirectoryName(project.FullName);
+        return path;
+    }
+    } catch(Exception) {}
+    return null;
+} 
+private XmlDocument GetXMLDocumentModel()
+{
+    //System.Diagnostics.Debugger.Launch(); 
+    XmlDocument doc = new XmlDocument();
+    StreamReader sr = File.OpenText(ProjectPath() + "\\Default.aspx");
+    string text = sr.ReadToEnd();
+    int start = text.IndexOf("<qww:QvExtension");
+    if (start > -1) {
+        int end = text.IndexOf("</qww:QvExtension>", start) + 18;
+        string xml = text.Substring(start,end-start);
+        xml = xml.Replace("qww:","");
+        sr.Close();
+        doc.LoadXml(xml);
+        if (doc.DocumentElement.Attributes["Name"]==null) {
+            if (ShowMessage) Message(NONAME);
+            XmlAttribute attr = doc.CreateAttribute("Name");
+            attr.InnerText = "No_name_entered";
+            doc.DocumentElement.Attributes.Append(attr);
+        }
+    } else {
+        if (ShowMessage) Message(NOCONTROL);
+        XmlElement dummyElement = doc.CreateElement("QvExtension");
+        XmlAttribute attr = doc.CreateAttribute("Name");
+        attr.InnerText = "No_name_entered";
+        dummyElement.Attributes.Append(attr);
+        doc.AppendChild(dummyElement);
+    }
+    return doc;
+}
+private StreamReader GetStreamReaderForRenderCode() {
+    StreamReader sr = File.OpenText(ProjectPath() + "\\Render.js");
+    return sr;
+}
+private string GetTypeForDefinition(string type) {
+    if (type == "Input")
+        return "RefValue";
+    else if (type == "Expression")
+        return "Measurement";
+    else 
+        return type;
+}
+private void Message(string msg) {
+    MessageBox.Show(msg,"QlikView Extension Generator");
+}
+#>

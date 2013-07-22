@@ -1,0 +1,650 @@
+﻿using System;
+
+using System.Collections;
+using System.Collections.Generic;
+using System.Collections.Specialized;
+
+using System.Linq;
+using System.Text;
+
+using System.IO;
+using System.IO.Pipes;
+using System.Threading;
+
+using CapCore = myQvCap.Core;
+
+using System.Runtime.Serialization;
+using System.Runtime.Serialization.Formatters.Binary;
+
+using System.Xml;
+using System.Xml.XPath;
+using System.Xml.Serialization;
+using System.Security.Permissions;
+
+namespace myQvCap.Threading
+{
+
+    public delegate void NewMessageEventHandler(object sender, PipeEventArgs e);
+
+    public class PipeEventArgs : EventArgs
+    {
+        public object msgQueueLock;
+        public Queue<CapCore.Tuple<CapCore.IReturnObject, Guid>> msgQueue;
+        public Object msg;
+
+        public PipeEventArgs() : base() { }
+        public PipeEventArgs(Object msgQueueLock, Queue<CapCore.Tuple<CapCore.IReturnObject, Guid>> msgQueue, Object msg)
+            : base()
+        {
+            this.msgQueueLock = msgQueueLock;
+            this.msgQueue = msgQueue;
+            this.msg = msg;
+        }
+
+    }
+
+    public class PipeTransport : IXmlSerializable
+    {
+        private Type type;
+        private CapCore.IReturnObject iro;
+        private bool isResponseExpected = false;
+        private Guid guid;
+
+        public PipeTransport() { }
+
+        public PipeTransport(Type type, CapCore.IReturnObject iro, bool isResponseExpected)
+        {
+            this.type = type;
+            this.iro = iro;
+            this.isResponseExpected = isResponseExpected;
+            if(isResponseExpected) this.guid = Guid.NewGuid();
+        }
+
+        public PipeTransport(Type type, CapCore.IReturnObject iro, Guid g)
+        {
+            this.type = type;
+            this.iro = iro;
+            this.isResponseExpected = true;
+            this.guid = g;
+
+        }
+
+        public bool IsResponseExpected()
+        {
+            return this.isResponseExpected;
+        }
+
+        public CapCore.IReturnObject getObject()
+        {
+            return this.iro;
+        }
+
+        public Type getType()
+        {
+            return this.type;
+        }
+
+        public Guid getGuid()
+        {
+            return this.guid;
+        }
+
+        public System.Xml.Schema.XmlSchema GetSchema()
+        {
+            return null;
+        }
+
+        public void ReadXml(XmlReader reader)
+        {
+            try
+            {
+                reader.ReadStartElement("PipeTransport");
+                reader.ReadStartElement("type");
+
+                this.type = Type.GetType(reader.ReadContentAsString());
+
+                reader.ReadEndElement();
+                reader.ReadStartElement("iro");
+
+                
+                XmlSerializer xSer = new XmlSerializer(typeof(CapCore.returnObject<>).MakeGenericType(new Type[] { this.getType() }));
+                byte[] byteArray = Encoding.ASCII.GetBytes(reader.ReadOuterXml());
+
+                if (byteArray.Length != 0)
+                {
+                    MemoryStream stream = new MemoryStream(byteArray);
+                    this.iro = ((CapCore.IReturnObject)xSer.Deserialize(stream));
+                }
+
+                reader.ReadEndElement();
+                reader.ReadStartElement("isResponseExpected");
+
+                this.isResponseExpected = Convert.ToBoolean(reader.ReadContentAsString());
+
+                reader.ReadEndElement();
+                reader.ReadStartElement("guid");
+
+                string s = reader.ReadContentAsString();
+
+                if (isResponseExpected)
+                {
+                    this.guid = new Guid(s);
+                }
+
+                
+                // reader.ReadEndElement();
+            }
+            catch (Exception e)
+            {
+                CapCore.Logging.log("Error while deserializing: " + e.Message, myQvCap.Core.LogType.Warning, 5);
+            }
+        }
+
+        public void WriteXml(XmlWriter writer)
+        {
+            writer.WriteStartElement("type");
+            writer.WriteString(this.getType().FullName);
+            writer.WriteEndElement();
+            writer.WriteStartElement("iro");
+
+            MemoryStream memStream = new MemoryStream();
+
+            XmlWriterSettings writerSettings = new XmlWriterSettings();
+            writerSettings.OmitXmlDeclaration = true;
+
+            using (XmlWriter xmlWriter = XmlWriter.Create(memStream, writerSettings))
+            {
+                XmlSerializerNamespaces ns = new XmlSerializerNamespaces();
+                ns.Add("", "");
+
+                XmlSerializer xSer = new XmlSerializer(typeof(CapCore.returnObject<>).MakeGenericType(new Type[] { this.getType() }));
+                xSer.Serialize(xmlWriter, this.getObject(), ns);
+            }
+            
+            memStream.Position = 0;
+            StreamReader streamReader = new StreamReader(memStream);
+            XmlDocument serializedXML = new XmlDocument();
+            serializedXML.Load(streamReader);
+
+            writer.WriteRaw(serializedXML.OuterXml);
+
+            writer.WriteEndElement();
+            writer.WriteStartElement("isResponseExpected");
+            writer.WriteString(this.isResponseExpected.ToString());
+            writer.WriteEndElement();
+
+            writer.WriteStartElement("guid");
+            writer.WriteString(this.guid.ToString());
+            writer.WriteEndElement();
+
+        }
+
+    }
+
+    public class PipeClient : IDisposable 
+    {
+        NamedPipeClientStream _iPipeClientO = null;
+        NamedPipeClientStream _iPipeClientI = null;
+
+        public PipeClient(string pipeName)
+        {
+            this._iPipeClientO = new NamedPipeClientStream(pipeName + "/In");
+            this._iPipeClientO.Connect(10000);
+
+            this._iPipeClientI = new NamedPipeClientStream(pipeName + "/Out");
+            this._iPipeClientI.Connect(10000);
+        }
+
+        public void WriteObject<T>(T o)
+        {
+            XmlSerializer xSer = new XmlSerializer(typeof(PipeTransport));
+            PipeTransport pt = new PipeTransport(typeof(T), new CapCore.returnObject<T>(o, 0, null), false);
+            xSer.Serialize(this._iPipeClientO, pt);
+        }
+
+        public U WriteObject<T, U>(T o)
+        {
+            XmlSerializer xSer = new XmlSerializer(typeof(PipeTransport));
+            PipeTransport pt = new PipeTransport(typeof(T), new CapCore.returnObject<T>(o, 0, null), true);
+            xSer.Serialize(this._iPipeClientO, pt);
+
+            return this.ReadObject<U>(pt.getGuid());
+        }
+
+        private T ReadObject<T>(Guid g)
+        {
+            XmlSerializer xSer = new XmlSerializer(typeof(PipeTransport));
+            PipeTransport p = (PipeTransport) xSer.Deserialize(this._iPipeClientI);
+
+            if (typeof(T) == p.getType() && p.getGuid() == g) return p.getObject().getObject<T>();
+            return default(T);
+        }
+
+        public void Dispose()
+        {
+            this._iPipeClientO.Dispose();
+            this._iPipeClientI.Dispose();
+        }
+    }
+
+    public class PipeServer
+    {
+        public event NewMessageEventHandler NewMessage;
+
+        public interface IPipeServerConnection
+        {
+            bool isConnected();
+            bool isLazy();
+
+            bool isReading();
+            bool isWriting();
+
+            bool refresh();
+            bool checkData();
+            bool sendData();
+
+            void WriteObject<T>(T o, Guid g);
+        }
+
+        private class PipeServerConnectionWatcher
+        {
+            private volatile bool _shouldStop = false;
+
+            private PipeServerConnection[] _iPipeServers = null;
+
+            public void DoWork(object p)
+            {
+                this._iPipeServers = ((PipeServer)p)._iPipeServers;
+
+                while (!_shouldStop)
+                {
+                    for (int i = 0; i < this._iPipeServers.Length; i++)
+                        if (this._iPipeServers[i].isLazy())
+                        {
+                            CapCore.Logging.log("Lazy pipe, refreshing it ...", CapCore.LogType.Information, 5);
+                            this._iPipeServers[i].refresh();
+                        }
+                        else if (this._iPipeServers[i].isConnected())
+                        {
+                            if (!this._iPipeServers[i].isReading()) this._iPipeServers[i].checkData();
+                            if (!this._iPipeServers[i].isWriting()) this._iPipeServers[i].sendData();
+                        }
+
+                    Thread.Sleep(1000);
+
+                    if (_shouldStop)
+                    {
+                        CapCore.Logging.log("Exiting ...", CapCore.LogType.Information, 1);
+                    }
+                }
+            }
+
+            public void Stop()
+            {
+                _shouldStop = true;
+            }
+        }
+        public class PipeServerConnection : IPipeServerConnection
+        {
+            public class UniPipeServerConnection : IPipeServerConnection
+            {
+                public NamedPipeServerStream iPipeServer = null;
+
+                public string pipeName;
+                public int maxConnections;
+                public PipeDirection dir;
+
+                private bool _isWaiting = false;
+                private object _isWaitingLock = new object();
+
+                private bool _isReading = false;
+                private object _isReadingLock = new object();
+
+                private bool _isWriting = false;
+                private object _isWritingLock = new object();
+
+                public byte[] curBuf = new byte[512];
+                public MemoryStream msgStream = new MemoryStream();
+                public int index;
+
+                public PipeServerConnection psc = null;
+                public PipeServer ps = null;
+
+                public Dictionary<Type, Queue<CapCore.Tuple<CapCore.IReturnObject, Guid>>> received = null;
+                public object receivedLock = new object();
+
+                public Queue<CapCore.Tuple<CapCore.IReturnObject, Guid>> toSend = new Queue<myQvCap.Core.Tuple<myQvCap.Core.IReturnObject, Guid>>();
+                public object toSendLock = new object();
+
+                public Dictionary<Guid, PipeServerConnection> responsePipe = null;
+                public object responsePipeLock = new object();
+
+                public UniPipeServerConnection(string pipeName, int maxConnections, PipeDirection dir, int index, PipeServerConnection psc, PipeServer ps)
+                {
+                    this.pipeName = pipeName;
+                    this.maxConnections = maxConnections;
+                    this.dir = dir;
+                    this.index = index;
+                    this.psc = psc;
+                    this.ps = ps;
+
+                    this.received = ps.received;
+                    this.receivedLock = ps.receivedLock;
+
+                    this.responsePipe = ps.responsePipe;
+                    this.responsePipeLock = ps.responsePipeLock;
+
+                }
+
+                protected virtual void OnNewMessage(PipeEventArgs e)
+                {
+                    if (ps.NewMessage != null) ps.NewMessage(this, e);
+                }
+
+                public bool isConnected()
+                {
+                    return this.iPipeServer != null && this.iPipeServer.IsConnected;
+                }
+
+                public bool isReading()
+                {
+                    lock (this._isReadingLock)
+                    {
+                        return this.isConnected() && this._isReading;
+                    }
+                }
+
+                public bool isWriting()
+                {
+                    return this.isConnected() && this._isWriting;
+                }
+
+                public bool isLazy()
+                {
+                    return !this.isConnected() && !this._isWaiting;
+                }
+
+                public void clearStream()
+                {
+                    this.msgStream.Flush();
+                }
+
+                public bool refresh()
+                {
+                    this._isWaiting = true;
+                    this.clearStream();
+                    if (this.iPipeServer != null)
+                    {
+                        this.iPipeServer.Dispose();
+                    }
+                    this.iPipeServer = new NamedPipeServerStream(this.pipeName + "/" + this.dir.ToString(), PipeDirection.InOut, this.maxConnections, PipeTransmissionMode.Message, PipeOptions.Asynchronous);
+                    this.iPipeServer.BeginWaitForConnection(new AsyncCallback(this.endRefresh), null);
+                    return true;
+                }
+
+                private void endRefresh(IAsyncResult state)
+                {
+                    this.iPipeServer.EndWaitForConnection(state);
+                    this._isWaiting = false;
+
+                    CapCore.Logging.log("Named pipe server " + this.index + ": connection established!", myQvCap.Core.LogType.Information, 5);
+                }
+
+                public bool checkData()
+                {
+                    CapCore.Logging.log("Named pipe server " + this.index + ": checking for data to recieve ...", myQvCap.Core.LogType.Information, 10);
+
+                    bool goodTogo = false;
+                    lock (this._isReadingLock)
+                    {
+                        if (!this._isReading)
+                        {
+                            this._isReading = true;
+                            goodTogo = true;
+                        }
+                    }
+
+                    if (goodTogo)
+                    {
+                        this.iPipeServer.BeginRead(this.curBuf, 0, this.curBuf.Length, new AsyncCallback(this.endCheckData), null);
+                        CapCore.Logging.log("Named pipe server " + this.index + ": begin of read operation", myQvCap.Core.LogType.Information, 10);
+                    }
+
+                    return true;
+                }
+
+                private void endCheckData(IAsyncResult state)
+                {
+                    CapCore.Logging.log("Named pipe server " + this.index + " (" + ((this.iPipeServer.IsConnected) ? "connected" : "disconnected") + "): end of read operation", myQvCap.Core.LogType.Information, 10);
+
+                    bool connStateOK = this.iPipeServer.IsConnected;
+
+                    int bytesRead = this.iPipeServer.EndRead(state);
+                    this.msgStream.Write(this.curBuf, 0, bytesRead);
+
+                    if (!this.iPipeServer.IsMessageComplete) this.iPipeServer.BeginRead(this.curBuf, 0, this.curBuf.Length, new AsyncCallback(this.endCheckData), null);
+                    else
+                    {
+                        string toto = ASCIIEncoding.ASCII.GetString(this.msgStream.ToArray());
+                        this.msgStream.Position = 0;
+
+                        if (connStateOK && toto.Trim().Length != 0)
+                        {
+                            XmlSerializer xSer = new XmlSerializer(typeof(PipeTransport));
+
+                            try
+                            {
+                                PipeTransport pt = ((PipeTransport)xSer.Deserialize(this.msgStream));
+
+                                if (pt.getObject() != null)
+                                {
+                                    lock (this.responsePipeLock)
+                                    {
+                                        if (pt.IsResponseExpected()) this.responsePipe.Add(pt.getGuid(), this.psc);
+                                    }
+
+                                    lock (this.receivedLock)
+                                    {
+                                        if (!this.received.ContainsKey(pt.getType())) this.received[pt.getType()] = new Queue<CapCore.Tuple<CapCore.IReturnObject, Guid>>();
+                                        this.received[pt.getType()].Enqueue(new CapCore.Tuple<CapCore.IReturnObject, Guid>(pt.getObject(), pt.getGuid()));
+                                    }
+
+                                    this.OnNewMessage(new PipeEventArgs(this.receivedLock, this.received[pt.getType()], pt.getObject().getObject()));
+
+                                    CapCore.Logging.log("Named pipe server " + this.index + ": recieved: " + pt.getObject().getObject().ToString(), myQvCap.Core.LogType.Information, 5);
+                                }
+                                else
+                                {
+                                    CapCore.Logging.log("Named pipe server " + this.index + ": recieved: null", myQvCap.Core.LogType.Information, 5);
+                                }
+                            }
+                            catch (Exception e)
+                            {
+                                CapCore.Logging.log("Named pipe server " + this.index + ": Error: " + e.Message + Environment.NewLine + e.StackTrace, myQvCap.Core.LogType.Error, 5);
+                                throw e;
+                            }
+                        }
+
+                        this.msgStream = new MemoryStream();
+
+                        lock (this._isReadingLock)
+                        {
+                            this._isReading = false;
+                        }
+                    }
+                }
+
+                public bool sendData()
+                {
+                    CapCore.Logging.log("Named pipe server " + this.index + ": checking for data to send ...", myQvCap.Core.LogType.Information, 10);
+
+                    bool goodTogo = false;
+                    bool isStillWriting = false;
+
+                    lock (this._isWritingLock)
+                    {
+                        if (!this._isWriting)
+                        {
+                            this._isWriting = true;
+                            goodTogo = true;
+                        }
+                    }
+
+                    if (goodTogo)
+                    {
+                        CapCore.Tuple<CapCore.IReturnObject, Guid> tirog = null;
+                        lock (this.toSendLock)
+                        {
+                            if (this.toSend.Count > 0) tirog = this.toSend.Dequeue();
+                        }
+
+                        if (tirog != null)
+                        {
+                            MemoryStream ms = new MemoryStream();
+                            XmlSerializer xSer = new XmlSerializer(typeof(PipeTransport));
+                            PipeTransport pt = new PipeTransport(tirog.First.getObjectType(), tirog.First, tirog.Second);
+                            xSer.Serialize(ms, pt);
+
+                            this.iPipeServer.BeginWrite(ms.GetBuffer(), 0, ms.GetBuffer().Length, new AsyncCallback(this.endSendData), null);
+                            CapCore.Logging.log("Named pipe server " + this.index + ": begin of write operation", myQvCap.Core.LogType.Information, 10);
+
+                            isStillWriting = true;
+                        }
+                    }
+
+                    if (!isStillWriting)
+                    {
+                        lock (this._isWritingLock)
+                        {
+                            this._isWriting = false;
+                        }
+                    }
+
+                    return true;
+                }
+
+                private void endSendData(IAsyncResult state)
+                {
+                    this.iPipeServer.EndWrite(state);
+
+                    lock (this._isWritingLock)
+                    {
+                        this._isWriting = false;
+                    }
+
+                }
+
+                public void WriteObject<T>(T o, Guid g)
+                {
+                    lock (this.toSendLock)
+                    {
+                        this.toSend.Enqueue(
+                            new CapCore.Tuple<CapCore.IReturnObject, Guid>(
+                                new myQvCap.Core.returnObject<T>(o, 0, "ok!"),
+                                g
+                            )
+                        );
+                    }
+                }
+            }
+
+            private UniPipeServerConnection _i = null;
+            private UniPipeServerConnection _o = null;
+
+            public PipeServerConnection(string pipeName, int maxConnections, int index, PipeServer ps)
+            {
+                this._i = new UniPipeServerConnection(pipeName, maxConnections, PipeDirection.In, index, this, ps);
+                this._o = new UniPipeServerConnection(pipeName, maxConnections, PipeDirection.Out, index, this, ps);
+            }
+
+            public bool isConnected()
+            {
+                return this._i.isConnected() && this._o.isConnected();
+            }
+
+            public bool isLazy()
+            {
+                return this._i.isLazy() || this._o.isLazy();
+            }
+
+            public bool isReading()
+            {
+                return this._i.isReading();
+            }
+
+            public bool isWriting()
+            {
+                return this._o.isWriting();
+            }
+
+            public bool refresh()
+            {
+                this._i.refresh();
+                this._o.refresh();
+
+                return true;
+            }
+
+            public bool checkData()
+            {
+                return this._i.checkData();
+            }
+
+            public bool sendData()
+            {
+                return this._o.sendData();
+            }
+
+            public void WriteObject<T>(T o, Guid g)
+            {
+                this._o.WriteObject<T>(o, g);
+            }
+
+        }
+
+        private PipeServerConnection[] _iPipeServers = new PipeServerConnection[3];
+        private PipeServerConnectionWatcher WSPipeServerConnectionWatcherObject = null;
+        private Thread WSPipeServerConnectionWatcherThread = null;
+
+        public Dictionary<Guid, PipeServerConnection> responsePipe = new Dictionary<Guid, PipeServerConnection>();
+        public object responsePipeLock = new object();
+
+        public Dictionary<Type, Queue<CapCore.Tuple<CapCore.IReturnObject, Guid>>> received = new Dictionary<Type, Queue<CapCore.Tuple<CapCore.IReturnObject, Guid>>>();
+        public object receivedLock = new object();
+
+        public PipeServer(string pipeName)
+        {
+            for (int i = 0; i < this._iPipeServers.Length; i++)
+                this._iPipeServers[i] = new PipeServerConnection(pipeName, this._iPipeServers.Length, i, this);
+
+            this.WSPipeServerConnectionWatcherObject = new PipeServerConnectionWatcher();
+            this.WSPipeServerConnectionWatcherThread = new Thread(this.WSPipeServerConnectionWatcherObject.DoWork);
+
+            this.WSPipeServerConnectionWatcherThread.Start(this);
+        }
+
+        public List<CapCore.Tuple<T, Guid>> readObjects<T>()
+        {
+            List<CapCore.Tuple<T, Guid>> ro = new List<CapCore.Tuple<T, Guid>>();
+            lock (this.receivedLock)
+            {
+                while (this.received.ContainsKey(typeof(T)) && this.received[typeof(T)].Count != 0)
+                {
+                    CapCore.Tuple<CapCore.IReturnObject, Guid> tirog = this.received[typeof(T)].Dequeue();
+                    ro.Add(new CapCore.Tuple<T, Guid>(tirog.First.getObject<T>(), tirog.Second));
+                }
+            }
+            return ro;
+        }
+
+        public void WriteObject<T>(T o, Guid g)
+        {
+            lock (this.responsePipeLock)
+            {
+                this.responsePipe[g].WriteObject<T>(o, g);
+                
+            }
+        }
+
+    }
+}

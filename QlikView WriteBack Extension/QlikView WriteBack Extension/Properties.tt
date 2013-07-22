@@ -1,0 +1,46 @@
+<#@include file="SharedTemplateCode.txt"#><#@ output extension=".qvpp" #><# 
+XmlDocument xmlDoc = GetXMLDocumentModel();
+XmlNodeList properties = xmlDoc.GetElementsByTagName( "Property" );
+string name = xmlDoc.DocumentElement.Attributes["Name"].Value;
+int countText = 0;
+int countDimension = 0;
+int countExpression = 0; 
+#><div class="ToolWindow-MainBody" avq="foldOutMenu:." style="overflow: visible !important; float: left;">
+  <div class="prop-accordion" avq="accordion:.">
+    <h3 class="prop-h3 accordion-shadow">
+      <a href="#"><#= name #></a>
+    </h3>
+    <div class="prop-grid_container accordion-shadow-enabler" style="overflow:auto;">
+      <div class="prop-grid_clear prop-grid_top-vertical-spacer-12px prop-grid_last"></div>
+		<# if (properties.Count > 0) { #>
+		<# for (int i = 0; i<properties.Count; i++) { #>
+		<div class="prop-grid_clear prop-grid_prepend-1 prop-grid_span-5 prop-grid_standard-height prop-grid_label">
+			<#= properties[i].Attributes["Label"].Value #>
+		</div>
+		<div class='prop-grid_span-10 prop-grid_last prop-grid_standard-height'>
+		<# if (properties[i].Attributes["Type"].Value == "Text") { countText ++; #>
+			<input class='prop-grid_checkbox prop-expression-input' type='text' style='width:94%;' avq='edit:.Chart.Text.<#=countText-1#>.Content' />
+			<span propicontype='expression' avq='dlgprop:.Chart.Text.<#=countText-1#>.Content:Expression.qvpp'></span>
+		<# } else if (properties[i].Attributes["Type"].Value == "Dimension") { countDimension ++; #>
+			<div class='prop-dyn-dynamic-dropdown-wrapper prop-width-162px' data-dynamicdropdown-type='standalone' avq='dynamicDropdown:.Chart.Dimension.<#=countDimension-1#>.Field'></div>
+		<# } else if (properties[i].Attributes["Type"].Value == "Expression") { countExpression ++; #>
+			<input class='prop-grid_checkbox prop-expression-input' type='text' style='width:94%;' avq='edit:.Chart.Expression.<#=countExpression-1#>.0.Definition' />
+			<span propicontype='expression' avq='dlgprop:.Chart.Expression.<#=countExpression-1#>.0.Definition:Expression.qvpp'></span>
+		<# } #></div><br />
+		<# } #>
+        <# } #></div>
+    <h3 class="prop-h3 accordion-shadow" avq="activeAccordionHeader:.:GenericPresentationFoldout.qvpp">
+      <a href="#">Presentation</a>
+    </h3>
+    <div class="prop-grid_container accordion-shadow-enabler" avq="panel::Layout.qvpp"></div>
+    <h3 class="prop-h3 accordion-shadow" name="accordion-header" avq="activeAccordionHeader:.:PropertiesCaptionFoldout.qvpp">
+      <a href="#">Caption</a>
+    </h3>
+    <div class="prop-grid_container accordion-shadow-enabler" avq="panel:.:Caption.qvpp"></div>
+    <h3 class="prop-h3 accordion-shadow" name="accordion-header" avq="activeAccordionHeader:.:PropertiesOptionsFoldout.qvpp">
+      <a href="#">Options</a>
+    </h3>
+    <div class="prop-grid_container accordion-shadow-enabler" avq="panel:.:ChartOptions.qvpp"></div>
+  </div>
+  <span class="bottom-gap"></span>
+</div>
