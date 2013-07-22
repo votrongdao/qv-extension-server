@@ -1,1 +1,0 @@
-﻿<%@ Page Language="C#" AutoEventWireup="true" CodeBehind="Proxy.aspx.cs" Inherits="QT.QWW.WebControls.Support.Proxy" %>
