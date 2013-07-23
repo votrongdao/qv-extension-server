@@ -146,22 +146,6 @@
       <Private>True</Private>
       <HintPath>..\packages\WebGrease.1.3.0\lib\Antlr3.Runtime.dll</HintPath>
     </Reference>
-    <Reference Include="XDMessaging, Version=4.0.9.0, Culture=neutral, PublicKeyToken=737bc70442f2c4af, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\XDMessaging.4.0.9\lib\net40-Client\XDMessaging.dll</HintPath>
-    </Reference>
-    <Reference Include="XDMessaging.Transport.Amazon, Version=4.0.9.0, Culture=neutral, PublicKeyToken=737bc70442f2c4af, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\XDMessaging.4.0.9\lib\net40-Client\XDMessaging.Transport.Amazon.dll</HintPath>
-    </Reference>
-    <Reference Include="XDMessaging.Transport.IOStream, Version=4.0.9.0, Culture=neutral, PublicKeyToken=737bc70442f2c4af, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\XDMessaging.4.0.9\lib\net40-Client\XDMessaging.Transport.IOStream.dll</HintPath>
-    </Reference>
-    <Reference Include="XDMessaging.Transport.WindowsMessaging, Version=4.0.9.0, Culture=neutral, PublicKeyToken=737bc70442f2c4af, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\XDMessaging.4.0.9\lib\net40-Client\XDMessaging.Transport.WindowsMessaging.dll</HintPath>
-    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="App_Start\BundleConfig.cs" />
